@@ -37,7 +37,7 @@ connection.connect((err) => {
 // Routes
 // POST route to handle user registration
 app.post('/register', (req, res) => {
-  const { username, firstName, secondName, lastName, telephone, email, userType, nicNumber, gymCategory, gymLocation, gymPhotos } = req.body;
+  const { username, firstName, secondName, lastName, telephone, email, userType, nicNumber, password } = req.body;
 
   let role = '';
   if (userType === 'owner') {
@@ -46,9 +46,9 @@ app.post('/register', (req, res) => {
     role = 'member';
   }
 
-  const sql = `INSERT INTO users (username, first_name, second_name, last_name, telephone, email, role, nic, gym_category, gym_location, gym_photo_url) 
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  const values = [username, firstName, secondName, lastName, telephone, email, role, nicNumber, gymCategory, gymLocation, gymPhotos];
+  const sql = `INSERT INTO users (username, first_name, second_name, last_name, telephone, email, role, nic, password) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  const values = [username, firstName, secondName, lastName, telephone, email, role, nicNumber, password];
 
   // Execute the SQL query
   pool.query(sql, values, (err, result) => {
@@ -58,6 +58,35 @@ app.post('/register', (req, res) => {
     } else {
       res.status(201).json({ message: 'User registered successfully' });
     }
+  });
+});
+
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+
+  // Check if the username and password are provided
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Please provide username and password' });
+  }
+
+  // Query the database to check if the user exists and the password is correct
+  pool.query('SELECT * FROM users WHERE username = ? AND password = ?', [username, password], (error, results) => {
+    if (error) {
+      console.error('Error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+
+    // If no user found with the given credentials, return an error
+    if (results.length === 0) {
+      return res.status(401).json({ message: 'Invalid username or password' });
+    }
+
+    // Extract user role from the database results
+    const { role } = results[0];
+    console.log(results);
+
+    // Send the user role back to the client
+    res.status(200).json({ role });
   });
 });
 
